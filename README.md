@@ -14,23 +14,14 @@ you can run the evaluation for both tasks by running the `main(args)` function (
 ```
 git clone https://github.com/NIST-NEON-DSE/idtrees_competition_evaluation.git
 ```
-### 2a) Initialize environment with requirements for Windows
+### 2) Initialize environment with requirements
 ```
-conda create --name idtrees
-conda activate idtrees #possible to use source activate idtrees
-conda install --channel conda-forge geopandas
-conda install -c conda-forge rasterio
-pip install -r windows_requirements.txt
-```
-### 2b) Initialize environment with requirements for Linux/MacOS
-```
-conda create --name idtrees
+conda env create -f environment.yaml
 conda activate idtrees
-pip install -r linux_requirements.txt
 ```
 
 *Data for evaluation should be stored as follow:*
-- ./eval/RS/RGB folder: contains RGB data that will be used to determine which detections to evaluate for each plot
+- ./RS/RGB folder: contains RGB data that will be used to determine which detections to evaluate for each plot
 - ./eval/submission: contains groundtruth and predictions spatial data (multipolygons with coordinates in wkt format)
 - ./scores: stores the outputs of the evaluation. Default is storing evaluation metrics as `csv`. Flagging the arguments parameter `save` to 1 in `parameters.py` will also save the plot of groundtruth - detection pairs selected by the hungarian algorithm.
 

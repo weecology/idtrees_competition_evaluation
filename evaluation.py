@@ -209,7 +209,7 @@ def run_segmentation_evaluation(par):
     return (evaluation_rand, evaluation_iou)
 
 
-def run_classification_evaluation(par=None):
+def run_classification_evaluation(par=None, remove_others = True):
     """
     Created on Fri May  8 13:15:23 2020
 

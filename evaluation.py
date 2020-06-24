@@ -238,15 +238,27 @@ def run_classification_evaluation(par=None):
     missing_cols = np.setdiff1d(obs.speciesID, ce_preds.columns)
     missing_species = pd.DataFrame(np.zeros([obs.shape[0], missing_cols.shape[0]]), columns = missing_cols)
    
-    #drop indexes and concat
-    missing_species = missing_species.reset_index(drop=True)
-    ce_preds = ce_preds.reset_index(drop=True)
+    #merge by index (e.g. individualID), remove others, and calculate cross entropy
+    missing_species.index = ce_preds.index
     ce_preds = pd.concat([ce_preds,missing_species],axis=1)
-    log_loss = log_loss(obs["speciesID"], ce_preds, labels = list_of_trained_species.taxonID)
+    ce_obs = obs.copy()
+    ce_obs.index = ce_obs.ID
+    results_mat = ce_obs.join(ce_preds)
+    if(remove_others is True):
+        idx = results_mat.speciesID == "Other"
+        results_mat = results_mat[~idx]
+        
+    ce = log_loss(results_mat["speciesID"], results_mat.drop(['ID','speciesID'], axis = 1), labels = list_of_trained_species.taxonID)   
+
     # get class from majority vote and compute F1 and confusion matrix
     idx = preds.groupby(["ID"])["probability"].transform(max) == preds["probability"]
     preds = preds[idx]
+    #merge by index (e.g. individualID), remove others, and calculate cross entropy
     evaluation_data = preds.merge(obs, left_on="ID", right_on="ID")
+    if(remove_others is True):
+        idx = evaluation_data.speciesID == "Other"
+        evaluation_data = evaluation_data[~idx]
+ 
     confusion_matrix = confusion_matrix(
         evaluation_data["taxonID"], evaluation_data["speciesID"]
     )
@@ -259,7 +271,7 @@ def run_classification_evaluation(par=None):
     df = df.rename(index={"macro avg": "macro F1", "weighted avg": "micro F1"})
     df.to_csv(par.outputdir + "/task2_evaluation.csv")
     print(df)
-    return (log_loss, df)
+    return (ce, df)
 
 
 def main(args=None):

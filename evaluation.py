@@ -217,17 +217,32 @@ def run_classification_evaluation(par=None):
     """
     # load test dataset
     import pandas as pd
+    import numpy as np
     from sklearn import metrics
     from sklearn.metrics import log_loss
     from sklearn.metrics import confusion_matrix
 
     # compute F1, cross entropy and confusion matrix
-    preds = pd.read_csv(par.datadir + "submission/task2_submission.csv")
-    obs = pd.read_csv(par.datadir + "submission/task2_ground.csv")
+    preds = pd.read_csv(par.datadir + "eval_groupsubmission/task2_submission.csv")
+    obs = pd.read_csv(par.datadir + "eval_groupsubmission/task2_ground.csv")
+    list_of_trained_species = pd.read_csv(par.datadir + "taxonID_ScientificName.csv")
 
+    #transform untrained species into Other cateogry
+    untrained = np.setdiff1d(obs.speciesID, list_of_trained_species.taxonID)
+    untrained_entries = obs.speciesID.isin(untrained)
+    obs.speciesID[untrained_entries] = "Other"
+     
     # compute cross entropy
     ce_preds = preds.pivot(index="ID", columns="taxonID", values="probability")
-    log_loss = log_loss(obs["speciesID"], ce_preds)
+    #get name of missing species
+    missing_cols = np.setdiff1d(obs.speciesID, ce_preds.columns)
+    missing_species = pd.DataFrame(np.zeros([obs.shape[0], missing_cols.shape[0]]), columns = missing_cols)
+   
+    #drop indexes and concat
+    missing_species = missing_species.reset_index(drop=True)
+    ce_preds = ce_preds.reset_index(drop=True)
+    ce_preds = pd.concat([ce_preds,missing_species],axis=1)
+    log_loss = log_loss(obs["speciesID"], ce_preds, labels = list_of_trained_species.taxonID)
     # get class from majority vote and compute F1 and confusion matrix
     idx = preds.groupby(["ID"])["probability"].transform(max) == preds["probability"]
     preds = preds[idx]

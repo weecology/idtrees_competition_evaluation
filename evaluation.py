@@ -223,8 +223,8 @@ def run_classification_evaluation(par=None, remove_others = True):
     from sklearn.metrics import confusion_matrix
 
     # compute F1, cross entropy and confusion matrix
-    preds = pd.read_csv(par.datadir + "/task2_submission.csv")
-    obs = pd.read_csv(par.datadir + "/task2_ground.csv")
+    preds = pd.read_csv(par.datadir + "submission/task2_submission.csv")
+    obs = pd.read_csv(par.datadir + "submission/task2_ground.csv")
     list_of_trained_species = pd.read_csv("./taxonID_ScientificName.csv")
 
     #transform untrained species into Other cateogry

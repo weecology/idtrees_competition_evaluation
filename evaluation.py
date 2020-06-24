@@ -209,7 +209,7 @@ def run_segmentation_evaluation(par):
     return (evaluation_rand, evaluation_iou)
 
 
-def run_classification_evaluation(par=None, remove_others = True):
+def run_classification_evaluation(par=None):
     """
     Created on Fri May  8 13:15:23 2020
 
@@ -225,7 +225,7 @@ def run_classification_evaluation(par=None, remove_others = True):
     # compute F1, cross entropy and confusion matrix
     preds = pd.read_csv(par.datadir + "submission/task2_submission.csv")
     obs = pd.read_csv(par.datadir + "submission/task2_ground.csv")
-    list_of_trained_species = pd.read_csv("./taxonID_ScientificName.csv")
+    list_of_trained_species = pd.read_csv(par.species_list_dir + "taxonID_ScientificName.csv")
 
     #transform untrained species into Other cateogry
     untrained = np.setdiff1d(obs.speciesID, list_of_trained_species.taxonID)
@@ -244,7 +244,7 @@ def run_classification_evaluation(par=None, remove_others = True):
     ce_obs = obs.copy()
     ce_obs.index = ce_obs.ID
     results_mat = ce_obs.join(ce_preds)
-    if(remove_others is True):
+    if(par.remove_others is True):
         idx = results_mat.speciesID == "Other"
         results_mat = results_mat[~idx]
         
@@ -255,7 +255,7 @@ def run_classification_evaluation(par=None, remove_others = True):
     preds = preds[idx]
     #merge by index (e.g. individualID), remove others, and calculate cross entropy
     evaluation_data = preds.merge(obs, left_on="ID", right_on="ID")
-    if(remove_others is True):
+    if(par.remove_others is True):
         idx = evaluation_data.speciesID == "Other"
         evaluation_data = evaluation_data[~idx]
  

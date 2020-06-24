@@ -47,6 +47,7 @@ def evaluation_parameters(args):
     
     #Data path and save path
     parser.add_argument('--datadir', help='folder that holds the data', default="./eval/", type=str)
+    parser.add_argument('--species_list_dir', help='folder that holds the list of trained species pool', default="./", type=str)
     parser.add_argument('--outputdir',help='folder that output is saved to',default="./scores/",type=str)
     parser.add_argument('--task',help='folder that output is saved to',default="both",type=str)
 
@@ -58,6 +59,9 @@ def evaluation_parameters(args):
     #Output parameters
     parser.add_argument('--save', help='plot the halos and ground truth boxes with the score and save in scores/imgs',  default=1, type=int)
     parser.add_argument('--area', help='size of the plot', default=np.array([200,200]), type=int)
+    
+    #species classification paramenters
+    parser.add_argument('--remove_others', help='how to treat known unknown? False will clump all labels as "Others"; True will just drop those species from evaluation. ',  default=False, type=bool)
     
     return parser.parse_args(args)
 

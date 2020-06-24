@@ -12,7 +12,7 @@ you can run the evaluation for both tasks by running the `main(args)` function (
 ## Installation
 ### 1) clone repo
 ```
-git clone https://github.com/NIST-NEON-DSE/idtrees_competition_evaluation.git
+git clone https://github.com/weecology/idtrees_competition_evaluation.git
 ```
 ### 2) Initialize environment with requirements
 ```

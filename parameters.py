@@ -47,7 +47,7 @@ def evaluation_parameters(args):
     
     #Data path and save path
     parser.add_argument('--datadir', help='folder that holds the data', default="./eval/", type=str)
-    parser.add_argument('--species_list_dir', help='folder that holds the list of trained species pool', default="./", type=str)
+    parser.add_argument('--species_list_dir', help='folder that holds the list of trained species pool', default="./eval/", type=str)
     parser.add_argument('--outputdir',help='folder that output is saved to',default="./scores/",type=str)
     parser.add_argument('--task',help='folder that output is saved to',default="both",type=str)
 

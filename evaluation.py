@@ -155,13 +155,13 @@ def run_segmentation_evaluation(par):
         pbar2 = tqdm(range(gdf_limits.shape[0]), position=0,ascii=True,leave=False)
         pbar2.set_description("Processing each detection for plot "+pl)
         for obs_itc in range(gdf_limits.shape[0]):
-            obs = gdf_limits.iloc[obs_itc, :].values
+            dets = gdf_limits.iloc[obs_itc, :].values
             for det_itc in range(gtf_limits.shape[0]):
-                preds = gtf_limits.iloc[det_itc, :].values
+                trues = gtf_limits.iloc[det_itc, :].values
                 # calculate rand index
-                R[obs_itc, det_itc] = RandNeon(obs, preds, im, par)
+                R[obs_itc, det_itc] = RandNeon(trues, dets, im, par)
                 # calculate the iou
-                iou[obs_itc, det_itc] = bb_intersection_over_union(obs, preds)
+                iou[obs_itc, det_itc] = bb_intersection_over_union(dets, trues)
             pbar2.update(1)
         # calculate the optimal matching using hungarian algorithm
         row_ind, col_ind = linear_sum_assignment(-R)
@@ -170,9 +170,9 @@ def run_segmentation_evaluation(par):
             # redo Rindex for good pairs
             pairs = np.c_[row_ind, col_ind]
             for i in range(pairs.shape[0]):
-                obs = gdf_limits.iloc[pairs[i, 0], :].values
-                preds = gtf_limits.iloc[pairs[i, 1], :].values
-                RandNeon(obs, preds, im, par, pname=str(i) + "_" + pl)
+                dets = gdf_limits.iloc[pairs[i, 0], :].values
+                trues = gtf_limits.iloc[pairs[i, 1], :].values
+                RandNeon(trues, dets, im, par, pname=str(i) + "_" + pl)
         # assigned couples
         foo = R[row_ind, col_ind]
         plot_scores = np.zeros(gtf_limits.shape[0])

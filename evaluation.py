@@ -225,12 +225,18 @@ def run_classification_evaluation(par=None):
     # compute F1, cross entropy and confusion matrix
     preds = pd.read_csv(par.datadir + "submission/task2_submission.csv")
     obs = pd.read_csv(par.datadir + "submission/task2_ground.csv")
+    missing_obs = np.setdiff1d(obs.ID, preds.ID)
+    miss = np.c_[missing_obs, np.zeros(len(missing_obs)),np.zeros(len(missing_obs))]
+    miss[:,2] = "Other"
+    miss[:,1] = 1
+    preds = preds.append(pd.DataFrame(miss, columns = ["ID",  "probability", "taxonID"]))
     list_of_trained_species = pd.read_csv(par.species_list_dir + "taxonID_ScientificName.csv")
 
     #transform untrained species into Other cateogry
     untrained = np.setdiff1d(obs.speciesID, list_of_trained_species.taxonID)
     untrained_entries = obs.speciesID.isin(untrained)
     obs.speciesID[untrained_entries] = "Other"
+
      
     # compute cross entropy
     ce_preds = preds.pivot(index="ID", columns="taxonID", values="probability")

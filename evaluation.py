@@ -37,8 +37,10 @@ to use this code:
 """
 
 # slightly modified from https://gist.github.com/meyerjo/dd3533edc97c81258898f60d8978eddc
-def bb_intersection_over_union(boxA, boxB):
+def bb_intersection_over_union(boxAA, boxBB):
     # recalculate vertices for box a and b from length weight
+    boxA = boxAA.copy()
+    boxB = boxBB.copy()
     boxA[2] = boxA[0] + boxA[2]
     boxA[3] = boxA[1] + boxA[3]
     boxB[2] = boxB[0] + boxB[2]
@@ -76,7 +78,6 @@ def get_vertex_per_plot(pl, par):
     pix_per_meter = 10
     detection_path = par.datadir + "submission/" + site + "_submission.csv"
     ras_path = "./RS/RGB/" + pl
-#    ras_path = par.datadir + "RS/RGB/" + pl
     # read plot raster to extract detections within the plot boundaries
     raster = rasterio.open(ras_path)
 
@@ -109,17 +110,6 @@ def get_vertex_per_plot(pl, par):
     gtf_limits["miny"] = (gtf_limits["miny"] - ymin) * pix_per_meter
     gtf_limits.columns = ["minx", "miny", "width", "length"]
 
-    # be sure the limits don't go off the plot
-    gdf_limits[gdf_limits < 0] = 0
-    gtf_limits[gtf_limits < 0] = 0
-
-    gtf_limits["width"][gtf_limits["minx"] + gtf_limits["width"] > 200] = (
-        gtf_limits["width"][gtf_limits["minx"] + gtf_limits["width"] > 200] - 1
-    )
-    gtf_limits["length"][gtf_limits["miny"] + gtf_limits["length"] > 200] = (
-        gtf_limits["length"][gtf_limits["miny"] + gtf_limits["length"] > 200] - 1
-    )
-
     gdf_limits = np.floor(gdf_limits).astype(int)
     gtf_limits = np.floor(gtf_limits).astype(int)
 
@@ -132,11 +122,10 @@ def from_raster_to_img(im_pt):
 
     arr = rasterio.open(im_pt)
     arr = arr.read()
-    arr = np.swapaxes(arr, 0, 1)
-    arr = np.swapaxes(arr, 1, 2)
-    arr = arr.astype("int16")
-    # plt.imshow(arr)
-    return arr[:, :, ::-1]
+    arr = np.moveaxis(arr,0,-1)
+    arr = arr[:,:,::-1]
+
+    return arr
 
 
 # get list of plots to evaluate
@@ -146,7 +135,6 @@ def run_segmentation_evaluation(par):
     import pandas as pd
     from scipy.optimize import linear_sum_assignment
 
-#    list_plots = [os.path.basename(x) for x in glob.glob(par.datadir + "RS/RGB/*.tif")]
     list_plots = [os.path.basename(x) for x in glob.glob("./RS/RGB/*.tif")]
 
     evaluation_rand = np.array([])
@@ -167,16 +155,14 @@ def run_segmentation_evaluation(par):
         pbar2 = tqdm(range(gdf_limits.shape[0]), position=0,ascii=True,leave=False)
         pbar2.set_description("Processing each detection for plot "+pl)
         for obs_itc in range(gdf_limits.shape[0]):
-            obs = gdf_limits.iloc[obs_itc, :].values
+            dets = gdf_limits.iloc[obs_itc, :].values
             for det_itc in range(gtf_limits.shape[0]):
-                preds = gtf_limits.iloc[det_itc, :].values
+                trues = gtf_limits.iloc[det_itc, :].values
                 # calculate rand index
-                R[obs_itc, det_itc] = RandNeon(obs, preds, im, par)
+                R[obs_itc, det_itc] = RandNeon(trues, dets, im, par)
                 # calculate the iou
-                iou[obs_itc, det_itc] = bb_intersection_over_union(obs, preds)
+                iou[obs_itc, det_itc] = bb_intersection_over_union(dets, trues)
             pbar2.update(1)
-#            pbar2.refresh()
-#            time.sleep(0.001)
         # calculate the optimal matching using hungarian algorithm
         row_ind, col_ind = linear_sum_assignment(-R)
         pbar2.close
@@ -184,10 +170,9 @@ def run_segmentation_evaluation(par):
             # redo Rindex for good pairs
             pairs = np.c_[row_ind, col_ind]
             for i in range(pairs.shape[0]):
-                #                print("Saving result "+str(i)+" of "+str(len(range(pairs.shape[0]))))
-                obs = gdf_limits.iloc[pairs[i, 0], :].values
-                preds = gtf_limits.iloc[pairs[i, 1], :].values
-                RandNeon(obs, preds, im, par, pname=str(i) + "_" + pl)
+                dets = gdf_limits.iloc[pairs[i, 0], :].values
+                trues = gtf_limits.iloc[pairs[i, 1], :].values
+                RandNeon(trues, dets, im, par, pname=str(i) + "_" + pl)
         # assigned couples
         foo = R[row_ind, col_ind]
         plot_scores = np.zeros(gtf_limits.shape[0])
@@ -241,31 +226,15 @@ def run_classification_evaluation(par=None):
     # compute cross entropy
     ce_preds = preds.pivot(index="ID", columns="taxonID", values="probability")
     #get name of missing species
-    missing_cols = np.setdiff1d(list_of_trained_species.taxonID, ce_preds.columns)
-    missing_species = pd.DataFrame(np.zeros([obs.shape[0], missing_cols.shape[0]]), columns = missing_cols)
-   
-    #merge by index (e.g. individualID), remove others, and calculate cross entropy
-    missing_species.index = ce_preds.index
-    ce_preds = pd.concat([ce_preds,missing_species],axis=1)
-    ce_obs = obs.copy()
-    ce_obs.index = ce_obs.ID
-    results_mat = ce_obs.join(ce_preds)
-    results_mat = results_mat.fillna(0)
-    if(par.remove_others is True):
-        idx = results_mat.speciesID == "Other"
-        results_mat = results_mat[~idx]
-        
-    ce = log_loss(results_mat["speciesID"], results_mat.drop(['ID','speciesID'], axis = 1), labels = list_of_trained_species.taxonID)   
+    missing_cols = np.setdiff1d(ce_preds.columns,obs.speciesID)
+    missing_sp = pd.DataFrame(np.zeros([ce_preds.shape[0], missing_cols.shape[0]]), columns = missing_cols)
+    ce_preds = pd.concat([ce_preds.reset_index(drop=True), missing_sp], axis=1)
 
+    log_loss = log_loss(y_true = obs["speciesID"], y_pred = ce_preds, labels = ce_preds.columns)
     # get class from majority vote and compute F1 and confusion matrix
     idx = preds.groupby(["ID"])["probability"].transform(max) == preds["probability"]
     preds = preds[idx]
-    #merge by index (e.g. individualID), remove others, and calculate cross entropy
     evaluation_data = preds.merge(obs, left_on="ID", right_on="ID")
-    if(par.remove_others is True):
-        idx = evaluation_data.speciesID == "Other"
-        evaluation_data = evaluation_data[~idx]
- 
     confusion_matrix = confusion_matrix(
         evaluation_data["taxonID"], evaluation_data["speciesID"]
     )
@@ -278,7 +247,7 @@ def run_classification_evaluation(par=None):
     df = df.rename(index={"macro avg": "macro F1", "weighted avg": "micro F1"})
     df.to_csv(par.outputdir + "/task2_evaluation.csv")
     print(df)
-    return (ce, df)
+    return (log_loss, df)
 
 
 def main(args=None):

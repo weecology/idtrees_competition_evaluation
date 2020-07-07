@@ -228,8 +228,8 @@ def run_classification_evaluation(par=None):
     # compute cross entropy
     ce_preds = preds.pivot(index="ID", columns="taxonID", values="probability")
     #get name of missing species
-    missing_cols = np.setdiff1d(obs.speciesID, ce_preds.columns)
-    #missing_cols = np.setdiff1d(ce_preds.columns,list_of_trained_species.taxonID)
+    #missing_cols = np.setdiff1d(obs.speciesID, ce_preds.columns)
+    missing_cols = np.setdiff1d(ce_preds.columns,list_of_trained_species.taxonID)
     missing_sp = pd.DataFrame(np.zeros([ce_preds.shape[0], missing_cols.shape[0]]), columns = missing_cols)
     ce_preds = pd.concat([ce_preds.reset_index(drop=True), missing_sp], axis=1)
     # add 

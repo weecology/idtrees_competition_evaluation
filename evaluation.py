@@ -221,14 +221,17 @@ def run_classification_evaluation(par=None):
     untrained = np.setdiff1d(obs.speciesID, list_of_trained_species.taxonID)
     untrained_entries = obs.speciesID.isin(untrained)
     obs.speciesID[untrained_entries] = "Other"
-
-     
+    untrained = np.setdiff1d(preds.taxonID, list_of_trained_species.taxonID)
+    untrained_entries = preds.taxonID.isin(untrained)
+    preds.taxonID[untrained_entries] = "Other"
+       
     # compute cross entropy
     ce_preds = preds.pivot(index="ID", columns="taxonID", values="probability")
     #get name of missing species
-    missing_cols = np.setdiff1d(ce_preds.columns,obs.speciesID)
+    missing_cols = np.setdiff1d(ce_preds.columns,obs.speciesID.unique())
     missing_sp = pd.DataFrame(np.zeros([ce_preds.shape[0], missing_cols.shape[0]]), columns = missing_cols)
     ce_preds = pd.concat([ce_preds.reset_index(drop=True), missing_sp], axis=1)
+    # add 
 
     log_loss = log_loss(y_true = obs["speciesID"], y_pred = ce_preds, labels = ce_preds.columns)
     # get class from majority vote and compute F1 and confusion matrix
@@ -236,11 +239,11 @@ def run_classification_evaluation(par=None):
     preds = preds[idx]
     evaluation_data = preds.merge(obs, left_on="ID", right_on="ID")
     confusion_matrix = confusion_matrix(
-        evaluation_data["taxonID"], evaluation_data["speciesID"]
+        evaluation_data["speciesID"], evaluation_data["taxonID"]
     )
 
     classification_report = metrics.classification_report(
-        evaluation_data["taxonID"], evaluation_data["speciesID"], output_dict=True
+        evaluation_data["speciesID"], evaluation_data["taxonID"], output_dict=True
     )
 
     df = pd.DataFrame(classification_report).transpose()
